@@ -1,3 +1,5 @@
+// Package pgfifo implements a barebones Pub/Sub message Queue backed
+// by a Postgres database.
 package pgfifo
 
 import (
@@ -13,31 +15,12 @@ import (
 // Database version
 var Version = 1
 
-type (
-	queueOptions struct {
-		tablePrefix string
-	}
-
-	Queue struct {
-		db      *sql.DB
-		options queueOptions
-	}
-
-	Message struct {
-		QueueTime time.Time
-		Topic     string
-		Payload   []byte
-	}
-
-	SubscriptionCallback func([]*Message) error
-)
-
-// Return formatted table name for a given table
-func (opts *queueOptions) table(t string) string {
-	return fmt.Sprintf("%s_%s", opts.tablePrefix, t)
-}
-
-// Create a new Queue in the specified database
+// New creates and returns a new Queue in the specified database.
+// The provided connection string should conform to a connection string
+// acceptable to [github.com/lib/pq].
+//
+// A new Queue is returned if successful, and an error is returned if
+// creating a new queue failed for some reason.
 func New(connectionStr string) (*Queue, error) {
 	var queue Queue
 
@@ -57,6 +40,36 @@ func New(connectionStr string) (*Queue, error) {
 	}
 
 	return &queue, err
+}
+
+type (
+	queueOptions struct {
+		tablePrefix string
+	}
+
+	// Queue object
+	Queue struct {
+		db      *sql.DB
+		options queueOptions
+	}
+
+	// A Message represents a single item in the Queue.
+	// The Payload of the message is encded as JSON
+	Message struct {
+		QueueTime time.Time
+		Topic     string
+		Payload   []byte
+	}
+
+	// SubscriptionCallback is a client-provided callback.
+	// When new events are ready to be consumed, they are passed to this function.
+	// If an error is returned by this callback, all events are reprocessed.
+	SubscriptionCallback func([]*Message) error
+)
+
+// Return formatted table name for a given table
+func (opts *queueOptions) table(t string) string {
+	return fmt.Sprintf("%s_%s", opts.tablePrefix, t)
 }
 
 // Publish a message on a particular topic
