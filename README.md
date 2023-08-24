@@ -2,7 +2,7 @@
 
 Barebones pub/sub message queue built on top of Postgres.
 
-Inspired by pgq and other implementations of this idea around the internet. This is the smallest useful subset (in my opinion) of useful features for this type of thing.
+Inspired by pgq and other implementations of this idea around the internet. This is the smallest useful subset (in my opinion) of features for this type of thing.
 
 ## Usage
 
