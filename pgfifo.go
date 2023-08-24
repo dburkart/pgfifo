@@ -24,7 +24,6 @@ type (
 	}
 
 	Message struct {
-		ID        int
 		QueueTime time.Time
 		Topic     string
 		Payload   []byte
@@ -65,6 +64,7 @@ func New(connectionStr string) (*Queue, error) {
 func (q *Queue) Publish(topic string, data any) error {
 	queueTable := q.options.table("queue")
 
+	// FIXME: Is JSON the best here?
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -88,6 +88,9 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 		for {
 			tx, _ := q.db.Begin()
 
+			// Use row-level locking to ensure that multiple clients don't reprocess
+			// already processed data
+			// FIXME: Make result limit configurable
 			rows, err := tx.Query(
 				fmt.Sprintf(
 					`DELETE FROM
@@ -107,6 +110,7 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 				log.Fatal(err)
 			}
 
+			// Pull out all results into a slice to send to the provided callback function
 			var messages []*Message
 			hasNext := rows.Next()
 			for hasNext {
@@ -123,6 +127,8 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 				log.Fatal(rows.Err())
 			}
 
+			// If an error is returned by the provided callback, we assume the batch needs to
+			// be reprocessed.
 			err = sub(messages)
 			if err != nil {
 				tx.Rollback()
