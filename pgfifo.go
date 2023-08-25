@@ -62,7 +62,7 @@ type (
 	}
 
 	// A Message represents a single item in the Queue.
-	// The Payload of the message is encded as JSON
+	// The Payload of the message is encoded as JSON
 	Message struct {
 		QueueTime time.Time
 		Topic     string
@@ -111,7 +111,6 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 
 			// Use row-level locking to ensure that multiple clients don't reprocess
 			// already processed data
-			// FIXME: Make result limit configurable
 			rows, err := tx.Query(
 				fmt.Sprintf(
 					`DELETE FROM
