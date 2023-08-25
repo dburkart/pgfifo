@@ -34,6 +34,7 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 
 	// Set defaults
 	queue.options.TablePrefix = "pgfifo"
+	queue.options.SubscriptionBatchSize = 10
 
 	// Set any user-defined options
 	for _, option := range options {
@@ -45,7 +46,15 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 			}
 
 			queue.options.TablePrefix = *val
+		case "SubscriptionBatchSize":
+			val, err := option.Value.(*uint)
+			if !err {
+				return nil, errors.New("SubscriptionSize option only accepts a uint")
+			}
+
+			queue.options.SubscriptionBatchSize = *val
 		default:
+			return nil, fmt.Errorf("unknown option specified: %s", option.Name)
 		}
 	}
 
@@ -59,7 +68,8 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 
 type (
 	queueOptions struct {
-		TablePrefix string
+		TablePrefix           string
+		SubscriptionBatchSize uint
 	}
 
 	// Queue object
@@ -124,12 +134,13 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 					`DELETE FROM
 						%s
 					USING (
-						SELECT * FROM %s WHERE topic LIKE '%s%%' LIMIT 10 FOR UPDATE SKIP LOCKED 
+						SELECT * FROM %s WHERE topic LIKE '%s%%' LIMIT %d FOR UPDATE SKIP LOCKED 
 					) q
 					WHERE q.id = %s.id RETURNING %s.*`,
 					queueTable,
 					queueTable,
 					topic,
+					q.options.SubscriptionBatchSize,
 					queueTable,
 					queueTable,
 				),
