@@ -21,6 +21,20 @@ if err != nil {
 }
 ```
 
+You can also set options for a given queue instance. For example, you may want to change the default prefix from the default (pgfifo) to "coolapp":
+
+```golang
+queue, err := pgfifo.New(
+    "postgres://postgres:password@localhost/postgres?sslmode=disable",
+    pgfifo.StringOption("TablePrefix", "coolapp"),
+)
+if err != nil {
+    // Do something with the error
+}
+```
+
+A full list of options can be found in the documentation for `pgfifo.New()`.
+
 Publish an event to a topic:
 
 ```golang
