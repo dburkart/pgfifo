@@ -5,6 +5,7 @@ package pgfifo
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -21,7 +22,7 @@ var Version = 1
 //
 // A new Queue is returned if successful, and an error is returned if
 // creating a new queue failed for some reason.
-func New(connectionStr string) (*Queue, error) {
+func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 	var queue Queue
 
 	db, err := sql.Open("postgres", connectionStr)
@@ -32,7 +33,21 @@ func New(connectionStr string) (*Queue, error) {
 	queue.db = db
 
 	// Set defaults
-	queue.options.tablePrefix = "pgfifo"
+	queue.options.TablePrefix = "pgfifo"
+
+	// Set any user-defined options
+	for _, option := range options {
+		switch option.Name {
+		case "TablePrefix":
+			val, err := option.Value.(*string)
+			if !err {
+				return nil, errors.New("TablePrefix option only accepts a string")
+			}
+
+			queue.options.TablePrefix = *val
+		default:
+		}
+	}
 
 	err = queue.migrate()
 	if err != nil {
@@ -44,7 +59,7 @@ func New(connectionStr string) (*Queue, error) {
 
 type (
 	queueOptions struct {
-		tablePrefix string
+		TablePrefix string
 	}
 
 	// Queue object
@@ -69,7 +84,7 @@ type (
 
 // Return formatted table name for a given table
 func (opts *queueOptions) table(t string) string {
-	return fmt.Sprintf("%s_%s", opts.tablePrefix, t)
+	return fmt.Sprintf("%s_%s", opts.TablePrefix, t)
 }
 
 // Publish a message on a particular topic
