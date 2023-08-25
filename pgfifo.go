@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -107,6 +106,9 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 
 		// Worker run loop
 		for {
+			var messages []*Message
+			var hasMore bool
+
 			tx, _ := q.db.Begin()
 
 			// Use row-level locking to ensure that multiple clients don't reprocess
@@ -128,30 +130,36 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 				),
 			)
 			if err != nil {
-				log.Fatal(err)
+				// FIXME: Do something with the error
+				tx.Rollback()
+				goto next
 			}
 
 			// Pull out all results into a slice to send to the provided callback function
-			var messages []*Message
-			hasNext := rows.Next()
-			for hasNext {
+			hasMore = rows.Next()
+			for hasMore {
 				var id int
 				var m Message
 				err := rows.Scan(&id, &m.QueueTime, &m.Topic, &m.Payload)
 				if err != nil {
-					log.Fatal(err)
+					// FIXME: Do something with the error
+					tx.Rollback()
+					goto next
 				}
 				messages = append(messages, &m)
-				hasNext = rows.Next()
+				hasMore = rows.Next()
 			}
 			if rows.Err() != nil {
-				log.Fatal(rows.Err())
+				// FIXME: Do something with the error
+				tx.Rollback()
+				goto next
 			}
 
 			// If an error is returned by the provided callback, we assume the batch needs to
 			// be reprocessed.
 			err = sub(messages)
 			if err != nil {
+				// FIXME: Do something with the error
 				tx.Rollback()
 				goto next
 			}
