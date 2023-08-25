@@ -5,7 +5,6 @@ package pgfifo
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -19,6 +18,11 @@ var Version = 1
 // New creates and returns a new Queue in the specified database.
 // The provided connection string should conform to a connection string
 // acceptable to [github.com/lib/pq].
+//
+// Available options that can be passed in when creating a Queue:
+//
+//   - TablePrefix (string) -- namespace to prefix on pgfifo tables. Defaults to "pgfifo"
+//   - SubscriptionBatchSize (uint) -- batch size for subscriptions. Defaults to 10
 //
 // A new Queue is returned if successful, and an error is returned if
 // creating a new queue failed for some reason.
@@ -37,25 +41,9 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 	queue.options.SubscriptionBatchSize = 10
 
 	// Set any user-defined options
-	for _, option := range options {
-		switch option.Name {
-		case "TablePrefix":
-			val, err := option.Value.(*string)
-			if !err {
-				return nil, errors.New("TablePrefix option only accepts a string")
-			}
-
-			queue.options.TablePrefix = *val
-		case "SubscriptionBatchSize":
-			val, err := option.Value.(*uint)
-			if !err {
-				return nil, errors.New("SubscriptionSize option only accepts a uint")
-			}
-
-			queue.options.SubscriptionBatchSize = *val
-		default:
-			return nil, fmt.Errorf("unknown option specified: %s", option.Name)
-		}
+	err = queue.setUserOptions(options)
+	if err != nil {
+		return nil, err
 	}
 
 	err = queue.migrate()
@@ -67,11 +55,6 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 }
 
 type (
-	queueOptions struct {
-		TablePrefix           string
-		SubscriptionBatchSize uint
-	}
-
 	// Queue object
 	Queue struct {
 		db      *sql.DB

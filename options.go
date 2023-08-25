@@ -1,9 +1,49 @@
 package pgfifo
 
-// QueueOption represents a configurable option that can be set for a Queue
-type QueueOption struct {
-	Name  string
-	Value any
+import (
+	"errors"
+	"fmt"
+)
+
+type (
+	queueOptions struct {
+		TablePrefix           string
+		SubscriptionBatchSize uint
+	}
+
+	// QueueOption represents a configurable option that can be set for a Queue
+	QueueOption struct {
+		Name  string
+		Value any
+	}
+)
+
+// setUserOptions sets user-provided options on a Queue
+func (q *Queue) setUserOptions(options []QueueOption) error {
+
+	// Set any user-defined options
+	for _, option := range options {
+		switch option.Name {
+		case "TablePrefix":
+			val, err := option.Value.(*string)
+			if !err {
+				return errors.New("TablePrefix option only accepts a string")
+			}
+
+			q.options.TablePrefix = *val
+		case "SubscriptionBatchSize":
+			val, err := option.Value.(*uint)
+			if !err {
+				return errors.New("SubscriptionSize option only accepts a uint")
+			}
+
+			q.options.SubscriptionBatchSize = *val
+		default:
+			return fmt.Errorf("unknown option specified: %s", option.Name)
+		}
+	}
+
+	return nil
 }
 
 // StringOption creates a new QueueOption containing a string
