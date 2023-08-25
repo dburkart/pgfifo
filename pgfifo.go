@@ -100,6 +100,7 @@ func (q *Queue) Publish(topic string, data any) error {
 }
 
 // Subscribe creates an asynchronous subscription to a particular topic
+// TODO: We need to figure out how to handle asynchronous errors.
 func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 	go func() {
 		queueTable := q.options.table("queue")
