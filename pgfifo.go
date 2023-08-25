@@ -74,11 +74,6 @@ type (
 	SubscriptionCallback func([]*Message) error
 )
 
-// Return formatted table name for a given table
-func (opts *queueOptions) table(t string) string {
-	return fmt.Sprintf("%s_%s", opts.TablePrefix, t)
-}
-
 // Publish a message on a particular topic
 // We take an interface, and serialize that to the specified topic
 func (q *Queue) Publish(topic string, data any) error {

@@ -46,6 +46,11 @@ func (q *Queue) setUserOptions(options []QueueOption) error {
 	return nil
 }
 
+// Return formatted table name for a given table
+func (opts *queueOptions) table(t string) string {
+	return fmt.Sprintf("%s_%s", opts.TablePrefix, t)
+}
+
 // StringOption creates a new QueueOption containing a string
 func StringOption(name, value string) QueueOption {
 	var option QueueOption
