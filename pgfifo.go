@@ -105,12 +105,16 @@ func (q *Queue) Subscribe(topic string, sub SubscriptionCallback) error {
 		for {
 			var messages []*Message
 			var hasMore bool
+			var rows *sql.Rows
 
-			tx, _ := q.db.Begin()
+			tx, err := q.db.Begin()
+			if err != nil {
+				goto next
+			}
 
 			// Use row-level locking to ensure that multiple clients don't reprocess
 			// already processed data
-			rows, err := tx.Query(
+			rows, err = tx.Query(
 				fmt.Sprintf(
 					`DELETE FROM
 						%s
