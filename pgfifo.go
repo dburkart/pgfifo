@@ -29,6 +29,7 @@ func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 	var queue Queue
 
 	db, err := sql.Open("postgres", connectionStr)
+	defer db.Close()
 	if err != nil {
 		return nil, err
 	}
