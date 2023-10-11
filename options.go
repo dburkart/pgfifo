@@ -38,6 +38,13 @@ func (q *Queue) setUserOptions(options []QueueOption) error {
 			}
 
 			q.options.SubscriptionBatchSize = *val
+		case "MaxOpenConnections":
+			val, err := option.Value.(*uint)
+			if !err {
+				return errors.New("MaxOpenConnections only accepts a uint")
+			}
+
+			q.db.SetMaxOpenConns(int(*val))
 		default:
 			return fmt.Errorf("unknown option specified: %s", option.Name)
 		}

@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -13,6 +14,9 @@ import (
 
 // Database version
 var Version = 1
+
+var instance *sql.DB
+var once sync.Once
 
 // New creates and returns a new Queue in the specified database.
 // The provided connection string should conform to a connection string
@@ -27,13 +31,17 @@ var Version = 1
 // creating a new queue failed for some reason.
 func New(connectionStr string, options ...QueueOption) (*Queue, error) {
 	var queue Queue
+	var err error
 
-	db, err := sql.Open("postgres", connectionStr)
+	once.Do(func() {
+		instance, err = sql.Open("postgres", connectionStr)
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	queue.db = db
+	queue.db = instance
 
 	// Set defaults
 	queue.options.TablePrefix = "pgfifo"
